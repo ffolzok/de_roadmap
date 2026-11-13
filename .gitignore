@@ -1,0 +1,5 @@
+venv/
+.env
+etl.log
+__pycache__/
+*.pyc
