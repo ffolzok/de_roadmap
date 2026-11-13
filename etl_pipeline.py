@@ -38,14 +38,7 @@ def transform(data):
         return None
     logger.info("Transform: начало обработки данных.")
     df = pd.DataFrame(data)
-    
-    # --- TODO 1: Сделайте трансформации ---
-    # 1. Оставьте только колонки: 'userId', 'id', 'title' (df = df[['userId', 'id', 'title']])
-    # 2. Переименуйте 'userId' в 'user_id', а 'title' в 'transaction_title' (используйте df.rename(columns={...}, inplace=True))
-    # 3. Добавьте колонку 'load_date' с текущим временем (df['load_date'] = datetime.now())
-    # 4. Удалите строки, где 'transaction_title' пустой (df.dropna(subset=['transaction_title'], inplace=True))
-    
-    # Напишите ваш код здесь:
+        
     # 1. Оставляем только нужные колонки
     df = df[['userId', 'id', 'title']]
 
@@ -73,13 +66,6 @@ def load(df):
     try:
         engine = create_engine(db_url)
         
-        # --- TODO 2: Загрузите данные в таблицу ---
-        # Используйте метод df.to_sql()
-        # Название таблицы: 'raw_transactions'
-        # Параметры: if_exists='append', index=False
-        # Подключение: con=engine
-        
-        # Напишите ваш код здесь:
         df.to_sql('raw_transactions', con=engine, if_exists='replace', index=False)
         
         logger.info(f"Load: успешно загружено {len(df)} строк.")
