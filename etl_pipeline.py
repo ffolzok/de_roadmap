@@ -1,5 +1,7 @@
 import os
 import logging
+from tenacity import retry, stop_after_attempt, wait_exponential
+from requests.exceptions import RequestException
 import requests
 import pandas as pd
 from datetime import datetime
@@ -20,18 +22,23 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+@retry(
+    stop=stop_after_attempt(3), 
+    wait=wait_exponential(multiplier=1, min=2, max=10),
+    reraise=True
+)
 def extract():
     url = os.getenv("API_URL")
     logger.info(f"Extract: запрос к {url}")
     try:
         response = requests.get(url, timeout=10)
-        response.raise_for_status()
+        response.raise_for_status() 
         data = response.json()
         logger.info(f"Extract: успешно получено {len(data)} записей.")
         return data
-    except Exception as e:
-        logger.error(f"Extract: ошибка - {e}")
-        return None
+    except RequestException as e:
+        logger.warning(f"Extract: ошибка сети {e}. Пробуем еще раз...")
+        raise e # Выбрасываем ошибку наверх, чтобы tenacity понял, что нужно повторить
 
 def transform(data):
     if not data:
@@ -50,6 +57,15 @@ def transform(data):
 
     # 4. Удаляем пустые заголовки (если они есть)
     df = df.dropna(subset=['transaction_title'])
+    # Удаляем строки, где user_id не является числом (грязные данные)
+    df = df[pd.to_numeric(df['user_id'], errors='coerce').notna()]
+    
+    # Приводим типы данных к строгим форматам для базы
+    df['user_id'] = df['user_id'].astype(int)
+    df['id'] = df['id'].astype(int)
+    df['transaction_title'] = df['transaction_title'].astype(str)
+    
+    logger.info(f"Transform: данные очищены. Строк после валидации: {len(df)}")
 
     
     logger.info(f"Transform: готово. Строк: {len(df)}")
